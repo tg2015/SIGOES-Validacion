@@ -1,11 +1,12 @@
 <?php
 /*
-Description: Este plugin intenta mejorar los comentarios: Elimina varias de las caracteristicas del lenguaje HOYGAN, Censura las malas palabras, Corrige la ortografia y Resalta las palabras claves
-Plugin Name: Mata HOYGAN
-Plugin URI: http://wordpress.org/extend/plugins/mata-hoygan/
-Author: Miguel Mariano
-Author URI: http://www.ciberwolf.com
-Version: 5.5
+Plugin Name: SIGOES-Validación
+Plugin URI: http://modulos.egob.sv
+Description: Plugin para la validación de modulos de proyectos, eventos coyunturales y transmision de streaming
+Version: 1.0
+Author: Equipo de desarrollo SIGOES
+Author URI: http://modulos.egob.sv
+Text Domain: SIGOES-Validacion
 */
 
 define('MH_BADWORDS','sexo,porno,pornografia,pornografica,xxx,desnudar,desnudo,desnuda,culear,culea,culeo,puta,puto,marica,gay,teta,pipi,picha,monda,verga,chucha,chocho,orto,culo,trola,marica,colla,hijodeputa,hijueputa,maricon,vergon,chuchon,pendejo,pendeja,imbecil,idiota,pija,nalga,mierda,caga,cagon,cagona,pelotudo,pelotuda,boluda,boludo,mamar,mamaron,perra,tarado,bobo,tonto,tarada,boba,tonta,careverga,caremonda,giripolla,gilipolla,gonorrea,cojon,ano,estupido,estupida,poronga,feo,fea,perdedor,perdedora,maldito,maldita,pene,cerote,fuck');
@@ -83,7 +84,7 @@ function mh_admin_print_title()
   .inside .list li { font-size: 11px; }
  </style>
  <div class = "wrap">
-  <h2>Mata-HOYGAN Opciones</h2>
+  <h2>SIGOES-validación</h2>
  <?php 
 }
 
@@ -91,12 +92,9 @@ function mh_admin_print_header()
 {
  ?>
  <div>
-  <p>Si crees que este Plugin es útil por favor considera escribir una opinión sobre el en tu Blog o darle una buena calificación en <a href="http://wordpress.org/extend/plugins/mata-hoygan/" target="_blank">WordPress.org</a>.
-  </p>
   <p><strong>IMPORTANTE</strong>: Los campos llamados "Excepciones" son para agregar las palabras que estan bien escritas pero que por uno u otro motivo el Plugin las toma como palabras HOYGANS y trata de transformarlas, un ejemplo son algunas palabras en ingles como: Good, Twitter, Market, Special, etc.
 Si ves que alguna palabra que esta bien escrita es transformada debes agregarla a los campos "Excepciones".</p>
 <p><strong>Excepciones con repetición de letras</strong>: En este campo agregamos las palabras que tienen 2 letras iguales juntas, ejemplo: Google, Badoo, Twitter.</p>
-
 <p><strong>Excepciones palabras con K</strong>: En este campo agregamos las palabras que tienen la letra "K", ejemplo: Kelly, Pokemon.</p>
 <p>El Plugin reconoce automaticamente algunas <strong>palabras con K en Ingles</strong> para que no pierdas tu tiempo agregando palabras con "K" a las Excepciones.</p>
 <p>Las palabras en Ingles reconocidas siguen estos patrones:</p>
@@ -303,7 +301,7 @@ function mh_create_admin_menu()
   update_option ('mh_terminado', '1');
   ?>
    <div id="message" class="updated fade">
-    <p>Transformando Comentarios Viejos (Puede demorarse dependiendo de la cantidad de comentarios no te asustes)</p>
+    <p>Transformando Comentarios Viejos</p>
    </div>
   <?php
   deshoyganizar_comentarios_viejos();
@@ -317,7 +315,9 @@ function mh_admin_menu_hook()
 {
  if (function_exists('add_options_page'))
  {
-  add_options_page('Mata-HOYGAN','Mata-HOYGAN','manage_options','mata_HOYGAN.php','mh_create_admin_menu');
+ add_options_page('Validación','Validación','manage_options','validacion','mh_create_admin_menu');
+ //Con la siguiente opcion se puede integrar al menu de proyecto atraves del slug de CTP
+ //add_submenu_page( 'edit.php?post_type=proyecto','Validación','Validación','manage_options','validacion','mh_create_admin_menu'); 
  }
 }
 add_action('admin_menu','mh_admin_menu_hook');
@@ -492,8 +492,7 @@ function desmultiplicar($word)
 
 function desms($word)
 {
-
- $translations = array(
+$translations = array(
                     '+' => 'más',
                     '+a' => 'masa',
                     'ad+' => 'además',
@@ -1460,8 +1459,8 @@ function hoyganismo()
    $texto_final= 'IHBhcmEgZWxpbWluYXIgZWwgTGVuZ3VhamUgSE9ZR0FOLg==';
   else if ($HOYGAN_activado == 0 && $Malas_palabras_activado == 1)
    $texto_final= 'IHBhcmEgQ2Vuc3VyYXIgZWwgTGVuZ3VhamUgT2JzY2Vuby4=';
-
-  echo '<br /><p style="font-size:80%;" display:block>' . base64_decode($texto_inicial) . base64_decode($texto_final) . "Aqui".'</p>';
+  
+  echo '<br /><p style="font-size:80%;" display:block>' . base64_decode($texto_inicial) . base64_decode($texto_final) .'</p>';
  }
 }
 add_action( 'comment_form', 'hoyganismo' );
@@ -1471,7 +1470,6 @@ function transformar_comentarios($words)
  $devolver='';
  $words = preg_replace("/(\r)|(\n)|(\r\n)|(\n\r)+/", "%salto_de_linea% ", $words);
  $palabras = preg_split("/[\s]+/",$words);
-
  if (get_option('mh_HOYGAN') == 1 || get_option('mh_censura') == 1)
  {
   $mh_stopwords=explode(",",MH_STOPWORDS);
@@ -1753,18 +1751,74 @@ function MostrarMensajes($message, $errormsg = false)
  printf(__(' | <a href="%1$s">Ocultar Mensaje</a></p></div>'), '?ocultar_mensaje=0');
 }
 
-function showAdminMessages()
+function showAdminMessages($str)
 {
  if (is_admin())
  {
   if (get_option('mensaje_ocultado')=='true')
   {
    if(get_option('mh_ultimo_comentario')==0)
-    MostrarMensajes("Deja de Jugar: Tu Blog no tiene comentarios viejos");
+    MostrarMensajes("No se realiza la validación");
    else
-    MostrarMensajes("Felicitaciones: Mata-HOYGAN a DesHOYGANIZADO " .get_option('mh_ultimo_comentario'). " comentarios viejos");
+    MostrarMensajes($str."Validación de comunicados terminada" .get_option('mh_ultimo_comentario'). " comentarios viejos");
   }
  }
 }
-add_action('admin_notices', 'showAdminMessages');
+add_action('admin_notices', 'showAdminMessages');   
+function validacionTitulo() { 
+ ?>
+<script type="text/javascript">
+jQuery(document).ready(function() {
+// publish button validation          
+  function AjaxEnvio(jsarray){
+   jQuery.ajax ( data = {
+        action: 'varEnvio',
+        url: ajaxurl,
+        type: 'POST',
+        dataType: 'text',
+        "cadena" : jsarray
+      }); // ajax init
+    jQuery.post(ajaxurl, data, function(response) {
+         console.log(response); //show json in console
+         }); // ajax post
+    }//Fin AjaxEnvio 
+    jQuery('#publish').on('click',function(e){
+   e.preventDefault();
+   var jsarray = new Array();
+     $title_value = jQuery.trim(jQuery('#title').val());
+     if($title_value != 0){
+        jsarray = $title_value;
+        AjaxEnvio(jsarray);
+   }
+   return false;
+   }); //Fin click  
+}); //Fin run
+</script>
+<?php   
+  }
+add_action('admin_footer','validacionTitulo',100); 
+function varEnvio_regreso(){
+  if(isset($_POST['cadena'])) {   
+  $str = $_POST['cadena']; 
+  RegresoTitulo($str);
+   die('error');
+   }  
+}
+add_action( 'wp_ajax_varEnvio', 'varEnvio_regreso');
+add_action('wp_ajax_nopriv_varEnvio', 'varEnvio_regreso');
+function RegresoTitulo($str) { 
+ ?>
+<script type="text/javascript">
+jQuery(document).ready(function() {
+// publish button validation
+var $malas_palabras = <?php echo json_encode($str);?>;
+  jQuery('#publish').click(function(){
+    alert($malas_palabras);
+      return false;
+    });
+  });
+</script>
+<?php   
+  }
+add_action('admin_footer','RegresoTitulo',101); 
 ?>
