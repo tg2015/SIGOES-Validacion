@@ -1617,25 +1617,23 @@ function utf8tohtml($utf8, $encodeTags)
  return $result;
 }
 
-function deshoyganizar_comentarios_viejos()
+function deshoyganizar_comentarios_viejos($cadenaAJAX = null)
 {
  global $wpdb;
  $ultimo_comentario = get_option('mh_ultimo_comentario');
-
- $count_comentarios = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM $wpdb->comments;"));
+ $id = 0;
+ $count_comentarios = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM $wpdb->comments Where comment_ID != %d;",$id));
  @set_time_limit(0);
 
- $SQL = mysql_query("SELECT * FROM " . $wpdb->comments);
- while($ROW = mysql_fetch_array($SQL))
- {
-  $iA = transformar_comentarios($ROW['comment_content']);
-  if(($iA != $ROW['comment_content']))
-  {
-   $CONSULTA = "UPDATE ".$wpdb->comments." SET comment_content='".utf8tohtml(mysql_real_escape_string($iA),false)."' WHERE comment_ID='".$ROW['comment_ID']."' LIMIT 1";
-   mysql_query($CONSULTA);
-  }
- }
-
+$SQL = $wpdb->get_results("SELECT * FROM " . $wpdb->comments, ARRAY_A);
+    foreach($SQL AS $ROW) {
+    $iA = transformar_comentarios($ROW['comment_content']);
+	if(($iA != $ROW['comment_content']))
+      {
+       $wpdb->update($wpdb->comments, array( 'comment_content' => utf8tohtml($iA,false)),array('comment_ID'=>$ROW['comment_ID']),array('%s'),array('%d')); 
+        }
+    } 
+	
  update_option( 'mh_ultimo_comentario', $count_comentarios);
 
  if (get_option('mensaje_ocultado')=='')
@@ -1644,7 +1642,9 @@ function deshoyganizar_comentarios_viejos()
  }
  else
   update_option ('mensaje_ocultado', 'true');
-
+ //Validacion SIGOES 
+$Correcciones = transformar_comentarios($cadenaAJAX);
+return $Correcciones;
 }
 
 function gSpell($searchterm, $lang = 'es')
@@ -1751,74 +1751,66 @@ function MostrarMensajes($message, $errormsg = false)
  printf(__(' | <a href="%1$s">Ocultar Mensaje</a></p></div>'), '?ocultar_mensaje=0');
 }
 
-function showAdminMessages($str)
+function showAdminMessages()
 {
  if (is_admin())
  {
   if (get_option('mensaje_ocultado')=='true')
   {
    if(get_option('mh_ultimo_comentario')==0)
-    MostrarMensajes("No se realiza la validación");
+    MostrarMensajes("No se realizo la validación");
    else
-    MostrarMensajes($str."Validación de comunicados terminada" .get_option('mh_ultimo_comentario'). " comentarios viejos");
+    MostrarMensajes("Validación de comunicados terminada" .get_option('mh_ultimo_comentario'));
   }
  }
 }
-add_action('admin_notices', 'showAdminMessages');   
-function validacionTitulo() { 
+add_action('admin_notices', 'showAdminMessages'); 
+function ValidacionTitulo() { 
  ?>
 <script type="text/javascript">
 jQuery(document).ready(function() {
-// publish button validation          
-  function AjaxEnvio(jsarray){
-   jQuery.ajax ( data = {
+//Titulo en blanco
+jQuery('#publish').click(function(){
+	   $title_value = jQuery.trim(jQuery('#title').val());
+	   if($title_value == 0 && $title_value != " "){
+		  alert('Por favor inserte un titulo!');
+		  jQuery('#title').focus();
+		  return false;
+		}
+	});
+//Diccionario	
+  var $jsArray = new String();
+  var $resultado;
+  jQuery('#publish').click(function(){
+
+    $Title_Value = jQuery.trim(jQuery('#title').val());
+    $jsArray = $Title_Value;	
+  jQuery.ajax ( data = {
         action: 'varEnvio',
         url: ajaxurl,
         type: 'POST',
-        dataType: 'text',
-        "cadena" : jsarray
-      }); // ajax init
-    jQuery.post(ajaxurl, data, function(response) {
-         console.log(response); //show json in console
-         }); // ajax post
-    }//Fin AjaxEnvio 
-    jQuery('#publish').on('click',function(e){
-   e.preventDefault();
-   var jsarray = new Array();
-     $title_value = jQuery.trim(jQuery('#title').val());
-     if($title_value != 0){
-        jsarray = $title_value;
-        AjaxEnvio(jsarray);
-   }
-   return false;
-   }); //Fin click  
-}); //Fin run
-</script>
-<?php   
-  }
-add_action('admin_footer','validacionTitulo',100); 
-function varEnvio_regreso(){
-  if(isset($_POST['cadena'])) {   
-  $str = $_POST['cadena']; 
-  RegresoTitulo($str);
-   die('error');
-   }  
-}
-add_action( 'wp_ajax_varEnvio', 'varEnvio_regreso');
-add_action('wp_ajax_nopriv_varEnvio', 'varEnvio_regreso');
-function RegresoTitulo($str) { 
- ?>
-<script type="text/javascript">
-jQuery(document).ready(function() {
-// publish button validation
-var $malas_palabras = <?php echo json_encode($str);?>;
-  jQuery('#publish').click(function(){
-    alert($malas_palabras);
-      return false;
+        dataType: 'html',
+        "cadena" : $jsArray
     });
-  });
+	var jqxhr = jQuery.post(ajaxurl, data,function(response) {
+         var resultado = response;
+          jQuery('#title').val(resultado);
+		  console.log (resultado);
+     }); 
+    jqxhr.always(function(){
+     });
+	  return false;
+   }); 
+});
 </script>
-<?php   
+<?php		
   }
-add_action('admin_footer','RegresoTitulo',101); 
+add_action('admin_footer','ValidacionTitulo',100); 
+function varEnvio_Regreso(){
+  $cadenaAJAX = $_POST['cadena']; 
+  $Correcciones = deshoyganizar_comentarios_viejos($cadenaAJAX);
+	echo $Correcciones;
+	wp_die();
+}
+add_action( 'wp_ajax_varEnvio', 'varEnvio_Regreso');
 ?>
